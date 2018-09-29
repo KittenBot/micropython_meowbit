@@ -18,3 +18,6 @@
 [submodule "lib/nrfx"]
 	path = lib/nrfx
 	url = https://github.com/NordicSemiconductor/nrfx.git
+[submodule "tools/uf2"]
+	path = tools/uf2
+	url = https://github.com/Microsoft/uf2

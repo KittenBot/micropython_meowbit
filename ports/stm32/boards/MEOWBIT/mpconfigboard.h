@@ -1,9 +1,9 @@
-#define MICROPY_HW_BOARD_NAME       "NUCLEO-F401RE"
+#define MICROPY_HW_BOARD_NAME       "MEOWBIT"
 #define MICROPY_HW_MCU_NAME         "STM32F401xE"
 
 #define MICROPY_HW_HAS_SWITCH       (1)
 #define MICROPY_HW_HAS_FLASH        (1)
-#define MICROPY_HW_ENABLE_RTC       (1)
+// #define MICROPY_HW_ENABLE_RTC       (1)
 #define MICROPY_HW_ENABLE_USB       (1)
 
 
@@ -21,8 +21,8 @@
 #define MICROPY_HW_UART6_RX     (pin_C7)
 // UART 2 connects to the STM32F103 (STLINK) on the Nucleo board
 // and this is exposed as a USB Serial port.
-#define MICROPY_HW_UART_REPL        PYB_UART_2
-#define MICROPY_HW_UART_REPL_BAUD   115200
+// #define MICROPY_HW_UART_REPL        PYB_UART_2
+// #define MICROPY_HW_UART_REPL_BAUD   115200
 
 // I2C busses
 #define MICROPY_HW_I2C1_SCL (pin_B8)        // Arduino D15, pin 3 on CN10

@@ -42,3 +42,5 @@ user.props
 # Generated rst files
 ######################
 genrst/
+
+.idea
