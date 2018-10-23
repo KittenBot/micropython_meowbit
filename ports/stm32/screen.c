@@ -48,7 +48,7 @@ typedef struct _pyb_screen_obj_t {
     const spi_t *spi;
     const pin_obj_t *pin_cs1;
     const pin_obj_t *pin_rst;
-    const pin_obj_t *pin_a0;
+    const pin_obj_t *pin_dc;
     const pin_obj_t *pin_bl;
 
     // character buffer for stdout-like output
@@ -59,15 +59,98 @@ typedef struct _pyb_screen_obj_t {
 
 } pyb_screen_obj_t;
 
+STATIC void screen_delay(void) {
+    __asm volatile ("nop\nnop");
+}
+
+STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t i) {
+    screen_delay();
+    mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
+    if (instr_data == LCD_INSTR) {
+        mp_hal_pin_low(screen->pin_dc); // A0=0; select instr reg
+    } else {
+        mp_hal_pin_high(screen->pin_dc); // A0=1; select data reg
+    }
+    screen_delay();
+    HAL_SPI_Transmit(screen->spi->spi, &i, 1, 1000);
+    screen_delay();
+    mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
+}
+
 
 /// \classmethod \constructor(skin_position)
 ///
 /// Construct an LCD object in the given skin position.  `skin_position` can be 'X' or 'Y', and
 /// should match the position where the LCD pyskin is plugged in.
 STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
-
+    // check arguments
+    mp_arg_check_num(n_args, n_kw, 1, 1, false);
     // create screen object
     pyb_screen_obj_t *screen = m_new_obj(pyb_screen_obj_t);
+    screen->base.type = &pyb_screen_type;
+
+    // configure pins, tft bind to spi2 on f4
+    screen->spi = &spi_obj[1];
+    screen->pin_cs1 = pyb_pin_PB12;
+    screen->pin_rst = pyb_pin_PC4;
+    screen->pin_dc = pyb_pin_PC5;
+    screen->pin_bl = pyb_pin_PA8; // todo: remove back light in next hardware interation
+
+    // init the SPI bus
+    SPI_InitTypeDef *init = &screen->spi->spi->Init;
+    init->Mode = SPI_MODE_MASTER;
+
+    // compute the baudrate prescaler from the desired baudrate
+    uint spi_clock;
+    // SPI2 and SPI3 are on APB1
+    spi_clock = HAL_RCC_GetPCLK1Freq();
+
+    uint br_prescale = spi_clock / 16000000; // datasheet says LCD can run at 20MHz, but we go for 16MHz
+    if (br_prescale <= 2) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2; }
+    else if (br_prescale <= 4) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4; }
+    else if (br_prescale <= 8) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; }
+    else if (br_prescale <= 16) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16; }
+    else if (br_prescale <= 32) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; }
+    else if (br_prescale <= 64) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; }
+    else if (br_prescale <= 128) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; }
+    else { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256; }
+
+    // data is sent bigendian, latches on rising clock
+    init->CLKPolarity = SPI_POLARITY_HIGH;
+    init->CLKPhase = SPI_PHASE_2EDGE;
+    init->Direction = SPI_DIRECTION_2LINES;
+    init->DataSize = SPI_DATASIZE_8BIT;
+    init->NSS = SPI_NSS_SOFT;
+    init->FirstBit = SPI_FIRSTBIT_MSB;
+    init->TIMode = SPI_TIMODE_DISABLED;
+    init->CRCCalculation = SPI_CRCCALCULATION_DISABLED;
+    init->CRCPolynomial = 0;
+
+    // init the SPI bus
+    spi_init(screen->spi, false);
+    // set the pins to default values
+    mp_hal_pin_high(screen->pin_cs1);
+    mp_hal_pin_high(screen->pin_rst);
+    mp_hal_pin_high(screen->pin_dc);
+    mp_hal_pin_low(screen->pin_bl);
+
+    // init the pins to be push/pull outputs
+    mp_hal_pin_output(screen->pin_cs1);
+    mp_hal_pin_output(screen->pin_rst);
+    mp_hal_pin_output(screen->pin_dc);
+    mp_hal_pin_output(screen->pin_bl);
+    // init the LCD
+    mp_hal_delay_ms(1); // wait a bit
+    mp_hal_pin_low(screen->pin_rst); // RST=0; reset
+    mp_hal_delay_ms(1); // wait for reset; 2us min
+    mp_hal_pin_high(screen->pin_rst); // RST=1; enable
+    mp_hal_delay_ms(1); // wait for reset; 2us min
+    // set backlight
+    mp_hal_pin_high(screen->pin_bl);
+
+
+
+
 
     return MP_OBJ_FROM_PTR(screen);
 }
