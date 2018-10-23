@@ -3,6 +3,7 @@
 
 #define MICROPY_HW_HAS_SWITCH       (1)
 #define MICROPY_HW_HAS_FLASH        (1)
+#define MICROPY_HW_HAS_SCREEN       (1)
 // #define MICROPY_HW_ENABLE_RTC       (1)
 #define MICROPY_HW_ENABLE_USB       (1)
 

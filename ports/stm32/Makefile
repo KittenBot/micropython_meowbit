@@ -262,6 +262,7 @@ SRC_C = \
 	sdram.c \
 	fatfs_port.c \
 	lcd.c \
+	screen.c \
 	accel.c \
 	servo.c \
 	dac.c \

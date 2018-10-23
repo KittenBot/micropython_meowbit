@@ -50,6 +50,7 @@
 #include "servo.h"
 #include "dac.h"
 #include "lcd.h"
+#include "screen.h"
 #include "usb.h"
 #include "portmodules.h"
 #include "modmachine.h"
@@ -228,6 +229,10 @@ STATIC const mp_rom_map_elem_t pyb_module_globals_table[] = {
 
 #if MICROPY_HW_HAS_LCD
     { MP_ROM_QSTR(MP_QSTR_LCD), MP_ROM_PTR(&pyb_lcd_type) },
+#endif
+
+#if MICROPY_HW_HAS_SCREEN
+    { MP_ROM_QSTR(MP_QSTR_SCREEN), MP_ROM_PTR(&pyb_screen_type) },
 #endif
 };
 
