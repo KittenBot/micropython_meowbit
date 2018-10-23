@@ -49,15 +49,23 @@
 //#define MICROPY_HW_SPI3_MOSI    (pin_B5)    // Arduino D4,  pin 29 on CN10
 
 // USRSW is pulled low. Pressing the button makes the input go high.
-#define MICROPY_HW_USRSW_PIN        (pin_C13)
-#define MICROPY_HW_USRSW_PULL       (GPIO_NOPULL)
+#define MICROPY_HW_USRSW_PIN        (pin_B2)
+// #define MICROPY_HW_USRSW_PULL       (GPIO_NOPULL)
+#define MICROPY_HW_USRSW_PULL       (GPIO_PULLUP)
 #define MICROPY_HW_USRSW_EXTI_MODE  (GPIO_MODE_IT_FALLING)
 #define MICROPY_HW_USRSW_PRESSED    (0)
 
 // LEDs
+#define MICROPY_HW_HAS_LED          (1)
+#define MICROPY_HW_LED_COUNT        (2)
+#define MICROPY_HW_LED_PULLUP       (0)
+
 #define MICROPY_HW_LED1             (pin_C8) // Active LED
+#define MICROPY_HW_LED2             (pin_C9) // Boot LED
 #define MICROPY_HW_LED_ON(pin)      (mp_hal_pin_high(pin))
 #define MICROPY_HW_LED_OFF(pin)     (mp_hal_pin_low(pin))
+
+
 
 // USB config
 #define MICROPY_HW_USB_FS              (1)
