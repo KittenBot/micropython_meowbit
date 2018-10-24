@@ -66,14 +66,17 @@ STATIC void screen_delay(void) {
 STATIC void send_cmd(pyb_screen_obj_t *screen, uint8_t * buf, uint8_t len) {
     screen_delay();
     mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
-    mp_hal_pin_low(screen->pin_dc);
+    mp_hal_pin_low(screen->pin_dc); // DC=0 for instruction
     screen_delay();
-    HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
+    HAL_SPI_Transmit(screen->spi->spi, buf, 1, 1000);
+    printf("cmd 0x%x\n", buf[0]);
     mp_hal_pin_high(screen->pin_dc);
+    screen_delay();
     len--;
     buf++;
     if (len > 0){
         HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
+        printf("v 0x%x len %d\n", buf[0], len);
     }
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 }
@@ -123,21 +126,12 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     init->Mode = SPI_MODE_MASTER;
 
     // compute the baudrate prescaler from the desired baudrate
-    uint spi_clock;
+    // uint spi_clock;
     // SPI2 and SPI3 are on APB1
-    spi_clock = HAL_RCC_GetPCLK1Freq();
-
-    uint br_prescale = spi_clock / 16000000; // datasheet says LCD can run at 20MHz, but we go for 16MHz
-    if (br_prescale <= 2) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2; }
-    else if (br_prescale <= 4) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4; }
-    else if (br_prescale <= 8) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; }
-    else if (br_prescale <= 16) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16; }
-    else if (br_prescale <= 32) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; }
-    else if (br_prescale <= 64) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; }
-    else if (br_prescale <= 128) { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; }
-    else { init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256; }
+    // spi_clock = HAL_RCC_GetPCLK1Freq();
 
     // data is sent bigendian, latches on rising clock
+    init->BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
     init->CLKPolarity = SPI_POLARITY_HIGH;
     init->CLKPhase = SPI_PHASE_2EDGE;
     init->Direction = SPI_DIRECTION_2LINES;
@@ -183,7 +177,7 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
 
     tmp[0] = ST7735_COLMOD;
     tmp[1] = 0x05;
-    send_cmd(screen, tmp, 1);
+    send_cmd(screen, tmp, 2);
 
     uint8_t tmp2[] ={
      ST7735_GMCTRP1,
