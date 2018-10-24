@@ -38,7 +38,7 @@ const uint16_t palette[] = {
     COL(0x000000), // 15
 };
 
-uint8_t fb[DISPLAY_WIDTH * DISPLAY_HEIGHT]; // only for palette
+// uint8_t fb[DISPLAY_WIDTH * DISPLAY_HEIGHT]; // only for palette
 
 
 typedef struct _pyb_screen_obj_t {
@@ -69,18 +69,19 @@ STATIC void send_cmd(pyb_screen_obj_t *screen, uint8_t * buf, uint8_t len) {
     mp_hal_pin_low(screen->pin_dc); // DC=0 for instruction
     screen_delay();
     HAL_SPI_Transmit(screen->spi->spi, buf, 1, 1000);
-    printf("cmd 0x%x\n", buf[0]);
+    //printf("cmd 0x%x\n", buf[0]);
     mp_hal_pin_high(screen->pin_dc);
     screen_delay();
     len--;
     buf++;
     if (len > 0){
         HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
-        printf("v 0x%x len %d\n", buf[0], len);
+        //printf("v 0x%x len %d\n", buf[0], len);
     }
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 }
 
+/*
 STATIC void draw_screen(pyb_screen_obj_t *screen){
     uint8_t cmdBuf[] = {ST7735_RAMWR};
     send_cmd(screen, cmdBuf, 1);
@@ -101,7 +102,7 @@ STATIC void draw_screen(pyb_screen_obj_t *screen){
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 
 }
-
+*/
 
 /// \classmethod \constructor(skin_position)
 ///
@@ -224,14 +225,39 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     send_cmd(screen, cmd3, sizeof(cmd3));
     send_cmd(screen, cmd4, sizeof(cmd4));
 
-    memset(fb, 10, sizeof(fb));
-    draw_screen(screen);
+    //memset(fb, 10, sizeof(fb));
+    //draw_screen(screen);
     return MP_OBJ_FROM_PTR(screen);
 }
 
 
+/// \method show()
+///
+/// Show the hidden buffer on the screen.
+STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
+    (void)n_args;
+    pyb_screen_obj_t *screen = MP_OBJ_TO_PTR(args[0]);
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_READ);
+    byte *p = bufinfo.buf;
+
+    uint8_t cmdBuf[] = {ST7735_RAMWR};
+    send_cmd(screen, cmdBuf, 1);
+
+    mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
+    mp_hal_pin_high(screen->pin_dc); // DC=1
+    HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
+
+    mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
+
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_screen_show_obj, 2, 2, pyb_screen_show);
+
 STATIC const mp_rom_map_elem_t pyb_screen_locals_dict_table[] = {
     // instance methods
+    { MP_ROM_QSTR(MP_QSTR_show), MP_ROM_PTR(&pyb_screen_show_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_screen_locals_dict, pyb_screen_locals_dict_table);
