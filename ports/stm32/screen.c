@@ -40,6 +40,7 @@ const uint16_t palette[] = {
 
 // uint8_t fb[DISPLAY_WIDTH * DISPLAY_HEIGHT]; // only for palette
 
+static uint8_t cmdBuf[20];
 
 typedef struct _pyb_screen_obj_t {
     mp_obj_base_t base;
@@ -58,6 +59,33 @@ typedef struct _pyb_screen_obj_t {
     int next_line;
 
 } pyb_screen_obj_t;
+
+#define DELAY 0x80
+
+static const uint8_t initCmds[] = {
+    ST7735_SWRESET,   DELAY,  //  1: Software reset, 0 args, w/delay
+      120,                    //     150 ms delay
+    ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, 0 args, w/delay
+      120,                    //     500 ms delay
+    ST7735_INVOFF , 0      ,  // 13: Don't invert display, no args, no delay
+    ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
+      0x05,                  //     16-bit color 565
+    ST7735_GMCTRP1, 16      , //  1: Magical unicorn dust, 16 args, no delay:
+    0x02, 0x1c, 0x07, 0x12,
+    0x37, 0x32, 0x29, 0x2d,
+    0x29, 0x25, 0x2B, 0x39,
+    0x00, 0x01, 0x03, 0x10,
+    ST7735_GMCTRN1, 16      , //  2: Sparkles and rainbows, 16 args, no delay:
+    0x03, 0x1d, 0x07, 0x06,
+    0x2E, 0x2C, 0x29, 0x2D,
+    0x2E, 0x2E, 0x37, 0x3F,
+    0x00, 0x00, 0x02, 0x10,
+    ST7735_NORON  ,    DELAY, //  3: Normal display on, no args, w/delay
+      10,                     //     10 ms delay
+    ST7735_DISPON ,    DELAY, //  4: Main screen turn on, no args w/delay
+      10,
+    0, 0 // END
+};
 
 STATIC void screen_delay(void) {
     __asm volatile ("nop\nnop");
@@ -81,28 +109,35 @@ STATIC void send_cmd(pyb_screen_obj_t *screen, uint8_t * buf, uint8_t len) {
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 }
 
-/*
-STATIC void draw_screen(pyb_screen_obj_t *screen){
-    uint8_t cmdBuf[] = {ST7735_RAMWR};
-    send_cmd(screen, cmdBuf, 1);
-
-    uint8_t *p = fb;
-    uint8_t colorBuf[2];
-
-    mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
-    mp_hal_pin_high(screen->pin_dc); // DC=1
-    for (int i = 0; i < DISPLAY_WIDTH; ++i) {
-        for (int j = 0; j < DISPLAY_HEIGHT; ++j) {
-            uint16_t color = palette[*p++ & 0xf];
-            colorBuf[0] = color >> 8;
-            colorBuf[1] = color & 0xff;
-            HAL_SPI_Transmit(screen->spi->spi, colorBuf, 2, 1000);
+static void sendCmdSeq(pyb_screen_obj_t *screen, const uint8_t *buf) {
+    while (*buf) {
+        cmdBuf[0] = *buf++;
+        int v = *buf++;
+        int len = v & ~DELAY;
+        // note that we have to copy to RAM
+        memcpy(cmdBuf + 1, buf, len);
+        send_cmd(screen, cmdBuf, len + 1);
+        buf += len;
+        if (v & DELAY) {
+            mp_hal_delay_ms(*buf++);
         }
     }
-    mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
-
 }
-*/
+
+static void setAddrWindow(pyb_screen_obj_t *screen, int x, int y, int w, int h) {
+    uint8_t cmd0[] = {ST7735_RASET, 0, (uint8_t)x, 0, (uint8_t)(x + w - 1)};
+    uint8_t cmd1[] = {ST7735_CASET, 0, (uint8_t)y, 0, (uint8_t)(y + h - 1)};
+    send_cmd(screen, cmd1, sizeof(cmd1));
+    send_cmd(screen, cmd0, sizeof(cmd0));
+}
+
+static void configure(pyb_screen_obj_t *screen, uint8_t madctl) {
+    uint8_t cmd0[] = {ST7735_MADCTL, madctl};
+    // 0x00 0x06 0x03: blue tab
+    uint8_t cmd1[] = {ST7735_FRMCTR1, 0x00, 0x06, 0x03};
+    send_cmd(screen, cmd0, sizeof(cmd0));
+    send_cmd(screen, cmd1, sizeof(cmd1));
+}
 
 /// \classmethod \constructor(skin_position)
 ///
@@ -110,7 +145,22 @@ STATIC void draw_screen(pyb_screen_obj_t *screen){
 /// should match the position where the LCD pyskin is plugged in.
 STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // check arguments
-    mp_arg_check_num(n_args, n_kw, 0, 0, false);
+    int madctl = 0x08;
+    int offX = 0x1;
+    int offY = 0x2;
+    int width = DISPLAY_WIDTH;
+    int height = DISPLAY_HEIGHT;
+    mp_arg_check_num(n_args, n_kw, 0, 5, false);
+    if (n_args >= 1) {
+        madctl = mp_obj_get_int(args[0]);
+        if (n_args > 1) {
+            offX = mp_obj_get_int(args[1]);
+            offY = mp_obj_get_int(args[2]);
+            width = mp_obj_get_int(args[3]);
+            height = mp_obj_get_int(args[4]);
+        }
+    }
+
     // create screen object
     pyb_screen_obj_t *screen = m_new_obj(pyb_screen_obj_t);
     screen->base.type = &pyb_screen_type;
@@ -165,65 +215,11 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     // set backlight
     mp_hal_pin_high(screen->pin_bl);
 
-    uint8_t tmp[16];
-    tmp[0] = ST7735_SWRESET;
-    send_cmd(screen, tmp, 1);
-    mp_hal_delay_ms(100);
-    tmp[0] = ST7735_SLPOUT;
-    send_cmd(screen, tmp, 1);
-    mp_hal_delay_ms(100);
+    sendCmdSeq(screen, initCmds);
 
-    tmp[0] = ST7735_INVOFF;
-    send_cmd(screen, tmp, 1);
-
-    tmp[0] = ST7735_COLMOD;
-    tmp[1] = 0x05;
-    send_cmd(screen, tmp, 2);
-
-    uint8_t tmp2[] ={
-     ST7735_GMCTRP1,
-      0x02, 0x1c, 0x07, 0x12,
-      0x37, 0x32, 0x29, 0x2d,
-      0x29, 0x25, 0x2B, 0x39,
-      0x00, 0x01, 0x03, 0x10,
-    };
-    send_cmd(screen, tmp2, 17);
-
-    uint8_t tmp3[] ={
-     ST7735_GMCTRN1,
-      0x03, 0x1d, 0x07, 0x06,
-      0x2E, 0x2C, 0x29, 0x2D,
-      0x2E, 0x2E, 0x37, 0x3F,
-      0x00, 0x00, 0x02, 0x10,
-    };
-    send_cmd(screen, tmp3, 17);
-
-    tmp[0] = ST7735_NORON;
-    send_cmd(screen, tmp, 1);
-    mp_hal_delay_ms(10);
-    tmp[0] = ST7735_DISPON;
-    send_cmd(screen, tmp, 1);
-    mp_hal_delay_ms(10);
-
-    uint32_t cfg0 = DISPLAY_CFG0;
-    // uint32_t cfg2 = DISPLAY_CFG2;
-    uint32_t frmctr1 = DISPLAY_CFG1;
-
-    uint32_t madctl = cfg0 & 0xff;
-    uint32_t offX = (cfg0 >> 8) & 0xff;
-    uint32_t offY = (cfg0 >> 16) & 0xff;
-    // uint32_t freq = (cfg2 & 0xff);
-
-    uint8_t cmd0[] = {ST7735_MADCTL, madctl};
-    uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8),
-                      (uint8_t)frmctr1};
-    send_cmd(screen, cmd0, sizeof(cmd0));
-    send_cmd(screen, cmd1, cmd1[3] == 0xff ? 3 : 4);
-
-    uint8_t cmd3[] = {ST7735_RASET, 0, (uint8_t)offX, 0, (uint8_t)(offX + DISPLAY_WIDTH - 1)};
-    uint8_t cmd4[] = {ST7735_CASET, 0, (uint8_t)offY, 0, (uint8_t)(offY + DISPLAY_HEIGHT - 1)};
-    send_cmd(screen, cmd3, sizeof(cmd3));
-    send_cmd(screen, cmd4, sizeof(cmd4));
+    madctl = madctl & 0xff;
+    configure(screen, madctl);
+    setAddrWindow(screen, offX, offY, width, height);
 
     //memset(fb, 10, sizeof(fb));
     //draw_screen(screen);
