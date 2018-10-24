@@ -47,6 +47,13 @@
 #define ST7735_GMCTRP1 0xE0
 #define ST7735_GMCTRN1 0xE1
 
+#define DISPLAY_CFG0 0x00020140 // 0x00000080
+#define DISPLAY_CFG1 0x000603
+#define DISPLAY_CFG2 22
+
+#define DISPLAY_WIDTH 160
+#define DISPLAY_HEIGHT 128
+
 extern const mp_obj_type_t pyb_screen_type;
 
 #endif // MICROPY_INCLUDED_STM32_LCD_H

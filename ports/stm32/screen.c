@@ -38,7 +38,7 @@ const uint16_t palette[] = {
     COL(0x000000), // 15
 };
 
-uint8_t fb[168 * 128]; // only for palette
+uint8_t fb[DISPLAY_WIDTH * DISPLAY_HEIGHT]; // only for palette
 
 
 typedef struct _pyb_screen_obj_t {
@@ -63,18 +63,40 @@ STATIC void screen_delay(void) {
     __asm volatile ("nop\nnop");
 }
 
-STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t * buf, uint8_t len) {
+STATIC void send_cmd(pyb_screen_obj_t *screen, uint8_t * buf, uint8_t len) {
     screen_delay();
     mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
-    if (instr_data == LCD_INSTR) {
-        mp_hal_pin_low(screen->pin_dc); // A0=0; select instr reg
-    } else {
-        mp_hal_pin_high(screen->pin_dc); // A0=1; select data reg
-    }
+    mp_hal_pin_low(screen->pin_dc);
     screen_delay();
     HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
-    screen_delay();
+    mp_hal_pin_high(screen->pin_dc);
+    len--;
+    buf++;
+    if (len > 0){
+        HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
+    }
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
+}
+
+STATIC void draw_screen(pyb_screen_obj_t *screen){
+    uint8_t cmdBuf[] = {ST7735_RAMWR};
+    send_cmd(screen, cmdBuf, 1);
+
+    uint8_t *p = fb;
+    uint8_t colorBuf[2];
+
+    mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
+    mp_hal_pin_high(screen->pin_dc); // DC=1
+    for (int i = 0; i < DISPLAY_WIDTH; ++i) {
+        for (int j = 0; j < DISPLAY_HEIGHT; ++j) {
+            uint16_t color = palette[*p++ & 0xf];
+            colorBuf[0] = color >> 8;
+            colorBuf[1] = color & 0xff;
+            HAL_SPI_Transmit(screen->spi->spi, colorBuf, 2, 1000);
+        }
+    }
+    mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
+
 }
 
 
@@ -84,7 +106,7 @@ STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t * buf, 
 /// should match the position where the LCD pyskin is plugged in.
 STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // check arguments
-    mp_arg_check_num(n_args, n_kw, 1, 1, false);
+    mp_arg_check_num(n_args, n_kw, 0, 0, false);
     // create screen object
     pyb_screen_obj_t *screen = m_new_obj(pyb_screen_obj_t);
     screen->base.type = &pyb_screen_type;
@@ -150,18 +172,18 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
 
     uint8_t tmp[16];
     tmp[0] = ST7735_SWRESET;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
     mp_hal_delay_ms(100);
     tmp[0] = ST7735_SLPOUT;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
     mp_hal_delay_ms(100);
 
     tmp[0] = ST7735_INVOFF;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
 
     tmp[0] = ST7735_COLMOD;
     tmp[1] = 0x05;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
 
     uint8_t tmp2[] ={
      ST7735_GMCTRP1,
@@ -170,7 +192,7 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
       0x29, 0x25, 0x2B, 0x39,
       0x00, 0x01, 0x03, 0x10,
     };
-    screen_out(screen, LCD_INSTR, tmp2, 17);
+    send_cmd(screen, tmp2, 17);
 
     uint8_t tmp3[] ={
      ST7735_GMCTRN1,
@@ -179,17 +201,37 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
       0x2E, 0x2E, 0x37, 0x3F,
       0x00, 0x00, 0x02, 0x10,
     };
-    screen_out(screen, LCD_INSTR, tmp3, 17);
-
+    send_cmd(screen, tmp3, 17);
 
     tmp[0] = ST7735_NORON;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
     mp_hal_delay_ms(10);
     tmp[0] = ST7735_DISPON;
-    screen_out(screen, LCD_INSTR, tmp, 1);
+    send_cmd(screen, tmp, 1);
     mp_hal_delay_ms(10);
 
+    uint32_t cfg0 = DISPLAY_CFG0;
+    // uint32_t cfg2 = DISPLAY_CFG2;
+    uint32_t frmctr1 = DISPLAY_CFG1;
 
+    uint32_t madctl = cfg0 & 0xff;
+    uint32_t offX = (cfg0 >> 8) & 0xff;
+    uint32_t offY = (cfg0 >> 16) & 0xff;
+    // uint32_t freq = (cfg2 & 0xff);
+
+    uint8_t cmd0[] = {ST7735_MADCTL, madctl};
+    uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8),
+                      (uint8_t)frmctr1};
+    send_cmd(screen, cmd0, sizeof(cmd0));
+    send_cmd(screen, cmd1, cmd1[3] == 0xff ? 3 : 4);
+
+    uint8_t cmd3[] = {ST7735_RASET, 0, (uint8_t)offX, 0, (uint8_t)(offX + DISPLAY_WIDTH - 1)};
+    uint8_t cmd4[] = {ST7735_CASET, 0, (uint8_t)offY, 0, (uint8_t)(offY + DISPLAY_HEIGHT - 1)};
+    send_cmd(screen, cmd3, sizeof(cmd3));
+    send_cmd(screen, cmd4, sizeof(cmd4));
+
+    memset(fb, 10, sizeof(fb));
+    draw_screen(screen);
     return MP_OBJ_FROM_PTR(screen);
 }
 
