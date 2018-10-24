@@ -63,7 +63,7 @@ STATIC void screen_delay(void) {
     __asm volatile ("nop\nnop");
 }
 
-STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t i) {
+STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t * buf, uint8_t len) {
     screen_delay();
     mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
     if (instr_data == LCD_INSTR) {
@@ -72,7 +72,7 @@ STATIC void screen_out(pyb_screen_obj_t *screen, int instr_data, uint8_t i) {
         mp_hal_pin_high(screen->pin_dc); // A0=1; select data reg
     }
     screen_delay();
-    HAL_SPI_Transmit(screen->spi->spi, &i, 1, 1000);
+    HAL_SPI_Transmit(screen->spi->spi, buf, len, 1000);
     screen_delay();
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 }
@@ -148,8 +148,46 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     // set backlight
     mp_hal_pin_high(screen->pin_bl);
 
+    uint8_t tmp[16];
+    tmp[0] = ST7735_SWRESET;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+    mp_hal_delay_ms(100);
+    tmp[0] = ST7735_SLPOUT;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+    mp_hal_delay_ms(100);
+
+    tmp[0] = ST7735_INVOFF;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+
+    tmp[0] = ST7735_COLMOD;
+    tmp[1] = 0x05;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+
+    uint8_t tmp2[] ={
+     ST7735_GMCTRP1,
+      0x02, 0x1c, 0x07, 0x12,
+      0x37, 0x32, 0x29, 0x2d,
+      0x29, 0x25, 0x2B, 0x39,
+      0x00, 0x01, 0x03, 0x10,
+    };
+    screen_out(screen, LCD_INSTR, tmp2, 17);
+
+    uint8_t tmp3[] ={
+     ST7735_GMCTRN1,
+      0x03, 0x1d, 0x07, 0x06,
+      0x2E, 0x2C, 0x29, 0x2D,
+      0x2E, 0x2E, 0x37, 0x3F,
+      0x00, 0x00, 0x02, 0x10,
+    };
+    screen_out(screen, LCD_INSTR, tmp3, 17);
 
 
+    tmp[0] = ST7735_NORON;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+    mp_hal_delay_ms(10);
+    tmp[0] = ST7735_DISPON;
+    screen_out(screen, LCD_INSTR, tmp, 1);
+    mp_hal_delay_ms(10);
 
 
     return MP_OBJ_FROM_PTR(screen);
