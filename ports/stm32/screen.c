@@ -145,15 +145,16 @@ static void configure(pyb_screen_obj_t *screen, uint8_t madctl) {
 /// should match the position where the LCD pyskin is plugged in.
 STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // check arguments
-    int madctl = 0x08;
-    int offX = 0x1;
-    int offY = 0x2;
-    int width = DISPLAY_WIDTH;
-    int height = DISPLAY_HEIGHT;
+    int madctl = 0x60;
+    // inverse for framebuffer define
+    int offX = 0x2;
+    int offY = 0x1;
+    int width = DISPLAY_HEIGHT;
+    int height = DISPLAY_WIDTH;
     mp_arg_check_num(n_args, n_kw, 0, 5, false);
     if (n_args >= 1) {
         madctl = mp_obj_get_int(args[0]);
-        if (n_args > 1) {
+        if (n_args == 5) {
             offX = mp_obj_get_int(args[1]);
             offY = mp_obj_get_int(args[2]);
             width = mp_obj_get_int(args[3]);
