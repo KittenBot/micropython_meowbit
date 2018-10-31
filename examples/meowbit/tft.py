@@ -6,14 +6,11 @@ fbuf = bytearray(160*128*2)
 fb = framebuf.FrameBuffer(fbuf, 160, 128, framebuf.RGB565)
 tft = pyb.SCREEN()
 fb.fill(0)
-fb.text("hello world", 0, 0, 0x001F)
-
 
 def showText(txt, x, y, col):
     b = bytearray(32)
     for c in txt:
         read_block(ord(c)*32, b)
-        print (ubinascii.hexlify(b))
         y0 = y
         for i in range(0,32,2):
             for j in range(7, -1, -1):
@@ -29,5 +26,9 @@ def showText(txt, x, y, col):
             y0+=1
         x+=16
 
-showText('你好世界',50,50,0x001F)
+showText('你好世界', 20, 10, 0xf800)
+fb.text('hello,world', 32, 30, 0x07e0)
+showText('안녕하세요', 35, 50, 0x001f)
+showText('こんにちは世界', 24, 70, 0x07DF)
+
 tft.show(fb)
