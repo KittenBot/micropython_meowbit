@@ -61,8 +61,8 @@
 #define MICROPY_HW_LED_COUNT        (2)
 #define MICROPY_HW_LED_PULLUP       (0)
 
-#define MICROPY_HW_LED1             (pin_C8) // Active LED
-#define MICROPY_HW_LED2             (pin_C9) // Boot LED
+#define MICROPY_HW_LED1             (pin_C14) // Active LED
+#define MICROPY_HW_LED2             (pin_C15) // Boot LED
 #define MICROPY_HW_LED_ON(pin)      (mp_hal_pin_high(pin))
 #define MICROPY_HW_LED_OFF(pin)     (mp_hal_pin_low(pin))
 
