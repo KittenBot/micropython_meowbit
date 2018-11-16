@@ -113,8 +113,11 @@ STATIC void mvlsb_fill_rect(const mp_obj_framebuf_t *fb, int x, int y, int w, in
 }
 
 // Functions for RGB565 format
+#define COL0(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
+#define COL(c) COL0((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff)
 
 STATIC void rgb565_setpixel(const mp_obj_framebuf_t *fb, int x, int y, uint32_t col) {
+    col = COL(col);
     uint16_t color = ((col&0xff) << 8) | ((col >> 8) & 0xff);
     ((uint16_t*)fb->buf)[x + y * fb->stride] = color;
 }
@@ -210,10 +213,11 @@ STATIC void gs4_hmsb_fill_rect(const mp_obj_framebuf_t *fb, int x, int y, int w,
 }
 
 // Functions for GS8 format
-
+#define COL08(r, g, b) ((((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6))
+#define COL8(c) COL08((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff)
 STATIC void gs8_setpixel(const mp_obj_framebuf_t *fb, int x, int y, uint32_t col) {
     uint8_t *pixel = &((uint8_t*)fb->buf)[(x + y * fb->stride)];
-    *pixel = col & 0xff;
+    *pixel = COL8(col) & 0xff;
 }
 
 STATIC uint32_t gs8_getpixel(const mp_obj_framebuf_t *fb, int x, int y) {

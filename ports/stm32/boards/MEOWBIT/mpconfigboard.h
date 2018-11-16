@@ -6,6 +6,7 @@
 #define MICROPY_HW_HAS_SCREEN       (1)
 // #define MICROPY_HW_ENABLE_RTC       (1)
 #define MICROPY_HW_ENABLE_USB       (1)
+#define MICROPY_HW_HAS_SDCARD       (1)
 
 
 // HSE is 8MHz, CPU freq set to 84MHz
@@ -14,6 +15,9 @@
 #define MICROPY_HW_CLK_PLLN (336)
 #define MICROPY_HW_CLK_PLLP (RCC_PLLP_DIV4)
 #define MICROPY_HW_CLK_PLLQ (7)
+#define MICROPY_HW_CLK_LAST_FREQ (1)
+
+#define MICROPY_HW_RTC_USE_LSE      (0)
 
 // UART config
 #define MICROPY_HW_UART2_TX     (pin_A2)
@@ -50,7 +54,7 @@
 //#define MICROPY_HW_SPI3_MOSI    (pin_B5)    // Arduino D4,  pin 29 on CN10
 
 // USRSW is pulled low. Pressing the button makes the input go high.
-#define MICROPY_HW_USRSW_PIN        (pin_B2)
+#define MICROPY_HW_USRSW_PIN        (pin_B9)
 // #define MICROPY_HW_USRSW_PULL       (GPIO_NOPULL)
 #define MICROPY_HW_USRSW_PULL       (GPIO_PULLUP)
 #define MICROPY_HW_USRSW_EXTI_MODE  (GPIO_MODE_IT_FALLING)
@@ -61,12 +65,15 @@
 #define MICROPY_HW_LED_COUNT        (2)
 #define MICROPY_HW_LED_PULLUP       (0)
 
-#define MICROPY_HW_LED1             (pin_C14) // Active LED
-#define MICROPY_HW_LED2             (pin_C15) // Boot LED
+#define MICROPY_HW_LED1             (pin_B5) // Active LED
+#define MICROPY_HW_LED2             (pin_B4) // Boot LED
 #define MICROPY_HW_LED_ON(pin)      (mp_hal_pin_high(pin))
 #define MICROPY_HW_LED_OFF(pin)     (mp_hal_pin_low(pin))
 
-
+// SD card detect switch
+#define MICROPY_HW_SDCARD_DETECT_PIN        (pin_C13)
+#define MICROPY_HW_SDCARD_DETECT_PULL       (GPIO_PULLUP)
+#define MICROPY_HW_SDCARD_DETECT_PRESENT    (GPIO_PIN_RESET)
 
 // USB config
 #define MICROPY_HW_USB_FS              (1)

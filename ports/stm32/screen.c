@@ -50,7 +50,7 @@ typedef struct _pyb_screen_obj_t {
     const pin_obj_t *pin_cs1;
     const pin_obj_t *pin_rst;
     const pin_obj_t *pin_dc;
-    // const pin_obj_t *pin_bl;
+    const pin_obj_t *pin_bl;
 
     // character buffer for stdout-like output
     char char_buffer[LCD_CHAR_BUF_W * LCD_CHAR_BUF_H];
@@ -171,7 +171,7 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     screen->pin_cs1 = pyb_pin_PB12;
     screen->pin_rst = pyb_pin_PB10;
     screen->pin_dc = pyb_pin_PA8;
-    // screen->pin_bl = pyb_pin_PA8; // todo: remove back light in next hardware interation
+    screen->pin_bl = pyb_pin_PB3;
 
     // init the SPI bus
     SPI_InitTypeDef *init = &screen->spi->spi->Init;
@@ -200,13 +200,13 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     mp_hal_pin_high(screen->pin_cs1);
     mp_hal_pin_high(screen->pin_rst);
     mp_hal_pin_high(screen->pin_dc);
-    //mp_hal_pin_low(screen->pin_bl);
+    mp_hal_pin_low(screen->pin_bl);
 
     // init the pins to be push/pull outputs
     mp_hal_pin_output(screen->pin_cs1);
     mp_hal_pin_output(screen->pin_rst);
     mp_hal_pin_output(screen->pin_dc);
-    //mp_hal_pin_output(screen->pin_bl);
+    mp_hal_pin_output(screen->pin_bl);
     // init the LCD
     mp_hal_delay_ms(1); // wait a bit
     mp_hal_pin_low(screen->pin_rst); // RST=0; reset
@@ -214,7 +214,7 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
     mp_hal_pin_high(screen->pin_rst); // RST=1; enable
     mp_hal_delay_ms(1); // wait for reset; 2us min
     // set backlight
-    //mp_hal_pin_high(screen->pin_bl);
+    mp_hal_pin_high(screen->pin_bl);
 
     sendCmdSeq(screen, initCmds);
 
