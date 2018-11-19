@@ -233,17 +233,31 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
 /// Show the hidden buffer on the screen.
 STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
     (void)n_args;
+    bool gs8code = 0;
     pyb_screen_obj_t *screen = MP_OBJ_TO_PTR(args[0]);
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_READ);
     byte *p = bufinfo.buf;
+
+    if (n_args >= 3){
+        gs8code = 1;
+    }
 
     uint8_t cmdBuf[] = {ST7735_RAMWR};
     send_cmd(screen, cmdBuf, 1);
 
     mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
     mp_hal_pin_high(screen->pin_dc); // DC=1
-    HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
+    if (gs8code){
+        uint16_t tmp;
+        for (int i=0;i<bufinfo.len;i++){
+            tmp = ((p[i] & 0xE0) << 8) | ((p[i] & 0x1C) << 6) | ((p[i] & 0x03) << 3);
+            HAL_SPI_Transmit(screen->spi->spi, (uint8_t*)&tmp, 2, 1000);
+        }
+    } else {
+        HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
+    }
+
 
     mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
 
