@@ -68,6 +68,8 @@ static const uint8_t initCmds[] = {
     ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, 0 args, w/delay
       120,                    //     500 ms delay
     ST7735_INVOFF , 0      ,  // 13: Don't invert display, no args, no delay
+    ST7735_INVCTR , 1      ,  // inverse, riven
+      0x03,
     ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
       0x05,                  //     16-bit color 565
     ST7735_GMCTRP1, 16      , //  1: Magical unicorn dust, 16 args, no delay:
@@ -145,10 +147,10 @@ static void configure(pyb_screen_obj_t *screen, uint8_t madctl) {
 /// should match the position where the LCD pyskin is plugged in.
 STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     // check arguments
-    int madctl = 0x60;
+    int madctl = 0x60; // riven, adapt to new screen
     // inverse for framebuffer define
-    int offX = 0x2;
-    int offY = 0x1;
+    int offX = 0x0;
+    int offY = 0x0;
     int width = DISPLAY_HEIGHT;
     int height = DISPLAY_WIDTH;
     mp_arg_check_num(n_args, n_kw, 0, 5, false);
