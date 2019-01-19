@@ -38,6 +38,11 @@ SECTIONS
         */py/parsenum.o(.text*)
         */py/mpprint.o(.text*)
 
+        */py/compile.o(.text*)
+        */py/objset.o(.text*)
+        */py/mpz.o(.text*)
+        */py/vm.o(.text*)
+
         . = ALIGN(4);
     } >FLASH_ISR
 
