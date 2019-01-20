@@ -177,7 +177,7 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
 
     // try to mount the flash
     FRESULT res = f_mount(&vfs_fat->fatfs);
-
+    printf("Flash Init %d\n", res);
     if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
         // no filesystem, or asked to reset it, so create a fresh one
 
@@ -187,6 +187,7 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
 
         uint8_t working_buf[_MAX_SS];
         res = f_mkfs(&vfs_fat->fatfs, FM_FAT, 0, working_buf, sizeof(working_buf));
+        printf("create flash filesystem %d\n", res);
         if (res == FR_OK) {
             // success creating fresh LFS
         } else {
@@ -595,8 +596,8 @@ soft_reset:
     #if defined(MICROPY_HW_UART_REPL)
     {
         mp_obj_t args[2] = {
-            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL),
-            MP_OBJ_NEW_SMALL_INT(MICROPY_HW_UART_REPL_BAUD),
+            MP_OBJ_NEW_SMALL_INT(PYB_UART_2),
+            MP_OBJ_NEW_SMALL_INT(9600),
         };
         MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t)&pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
         uart_attach_to_repl(MP_STATE_PORT(pyb_stdio_uart), true);

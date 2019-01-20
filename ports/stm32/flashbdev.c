@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -57,8 +57,8 @@
 STATIC byte flash_cache_mem[0x4000] __attribute__((aligned(4))); // 16k
 #define CACHE_MEM_START_ADDR (&flash_cache_mem[0])
 #define FLASH_SECTOR_SIZE_MAX (0x4000) // 16k max due to size of cache buffer
-#define FLASH_MEM_SEG1_START_ADDR (0x08004000) // sector 1
-#define FLASH_MEM_SEG1_NUM_BLOCKS (128) // sectors 1,2,3,4: 16k+16k+16k+16k(of 64k)=64k
+#define FLASH_MEM_SEG1_START_ADDR (0x08020000) // sector 1, riven change to sec 5
+#define FLASH_MEM_SEG1_NUM_BLOCKS (128) // 128, sectors 1,2,3,4: 16k+16k+16k+16k(of 64k)=64k
 
 #elif defined(STM32F429xx)
 
@@ -175,6 +175,7 @@ static uint8_t *flash_cache_get_addr_for_write(uint32_t flash_addr) {
     flash_flags |= FLASH_FLAG_DIRTY;
     led_state(PYB_LED_RED, 1); // indicate a dirty cache with LED on
     flash_tick_counter_last_write = HAL_GetTick();
+    printf("io cache %ld\n",flash_addr - flash_sector_start);
     return (uint8_t*)CACHE_MEM_START_ADDR + flash_addr - flash_sector_start;
 }
 
@@ -249,6 +250,7 @@ static void flash_bdev_irq_handler(void) {
 bool flash_bdev_readblock(uint8_t *dest, uint32_t block) {
     // non-MBR block, get data from flash memory, possibly via cache
     uint32_t flash_addr = convert_block_to_flash_addr(block);
+    printf("io-rd %ld %lx\n", block, flash_addr);
     if (flash_addr == -1) {
         // bad block number
         return false;
@@ -261,6 +263,7 @@ bool flash_bdev_readblock(uint8_t *dest, uint32_t block) {
 bool flash_bdev_writeblock(const uint8_t *src, uint32_t block) {
     // non-MBR block, copy to cache
     uint32_t flash_addr = convert_block_to_flash_addr(block);
+    printf("io-wr %ld %lx\n", block, flash_addr);
     if (flash_addr == -1) {
         // bad block number
         return false;

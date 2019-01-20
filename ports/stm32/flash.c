@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include "py/mpconfig.h"
 #include "py/misc.h"
 #include "flash.h"
@@ -156,7 +157,7 @@ void flash_erase(uint32_t flash_dest, uint32_t num_word32) {
 
     // unlock
     HAL_FLASH_Unlock();
-
+    printf("flash er %lx %ld\n", flash_dest, num_word32);
     FLASH_EraseInitTypeDef EraseInitStruct;
 
     #if defined(STM32F0)
@@ -268,7 +269,7 @@ void flash_write(uint32_t flash_dest, const uint32_t *src, uint32_t num_word32) 
     }
 
     #else
-
+    printf("flash wr %lx %ld\n", flash_dest, num_word32);
     // program the flash word by word
     for (int i = 0; i < num_word32; i++) {
         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, flash_dest, *src) != HAL_OK) {

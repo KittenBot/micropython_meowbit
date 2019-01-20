@@ -1,6 +1,6 @@
 #include "py/mphal.h"
 
-void STM32L476DISC_board_early_init(void) {
+void MEOWBIT_board_early_init(void) {
     // set SPI flash WP and HOLD pins high
     mp_hal_pin_output(pin_E14);
     mp_hal_pin_output(pin_E15);

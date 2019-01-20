@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -124,7 +124,7 @@ static void build_partition(uint8_t *buf, int boot, int type, uint32_t start_blo
 }
 
 bool storage_read_block(uint8_t *dest, uint32_t block) {
-    //printf("RD %u\n", block);
+    printf("RD %lu\n", block);
     if (block == 0) {
         // fake the MBR so we can decide on our own partition table
 
@@ -156,7 +156,7 @@ bool storage_read_block(uint8_t *dest, uint32_t block) {
 }
 
 bool storage_write_block(const uint8_t *src, uint32_t block) {
-    //printf("WR %u\n", block);
+    printf("WR %lu\n", block);
     if (block == 0) {
         // can't write MBR, but pretend we did
         return true;
@@ -202,7 +202,7 @@ mp_uint_t storage_write_blocks(const uint8_t *src, uint32_t block_num, uint32_t 
         return MICROPY_HW_BDEV2_WRITEBLOCKS(src, block_num - FLASH_PART2_START_BLOCK, num_blocks);
     }
     #endif
-
+    printf("storage wr blocks %ld %ld\n", block_num, num_blocks);
     for (size_t i = 0; i < num_blocks; i++) {
         if (!storage_write_block(src + i * FLASH_BLOCK_SIZE, block_num + i)) {
             return 1; // error
