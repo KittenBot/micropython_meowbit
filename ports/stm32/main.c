@@ -177,7 +177,7 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
 
     // try to mount the flash
     FRESULT res = f_mount(&vfs_fat->fatfs);
-    printf("Flash Init %d\n", res);
+    // printf("Flash Init %d\n", res);
     if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
         // no filesystem, or asked to reset it, so create a fresh one
 

@@ -569,7 +569,7 @@ const spi_t *spi_from_mp_obj(mp_obj_t o) {
 
 STATIC int spi_proto_ioctl(void *self_in, uint32_t cmd) {
     spi_proto_cfg_t *self = (spi_proto_cfg_t*)self_in;
-
+    // printf("spi ioctl %ld\n", cmd);
     switch (cmd) {
         case MP_SPI_IOCTL_INIT:
             self->spi->spi->Init.Mode = SPI_MODE_MASTER;
@@ -591,6 +591,7 @@ STATIC int spi_proto_ioctl(void *self_in, uint32_t cmd) {
 }
 
 STATIC void spi_proto_transfer(void *self_in, size_t len, const uint8_t *src, uint8_t *dest) {
+    // printf("spi trans %d\n", len);
     spi_proto_cfg_t *self = (spi_proto_cfg_t*)self_in;
     spi_transfer(self->spi, len, src, dest, SPI_TRANSFER_TIMEOUT(len));
 }

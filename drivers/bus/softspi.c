@@ -24,10 +24,12 @@
  * THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include "drivers/bus/spi.h"
 
 int mp_soft_spi_ioctl(void *self_in, uint32_t cmd) {
     mp_soft_spi_obj_t *self = (mp_soft_spi_obj_t*)self_in;
+    printf("soft spi ioctl %ld\n", cmd);
 
     switch (cmd) {
         case MP_SPI_IOCTL_INIT:
@@ -47,6 +49,7 @@ int mp_soft_spi_ioctl(void *self_in, uint32_t cmd) {
 void mp_soft_spi_transfer(void *self_in, size_t len, const uint8_t *src, uint8_t *dest) {
     mp_soft_spi_obj_t *self = (mp_soft_spi_obj_t*)self_in;
     uint32_t delay_half = self->delay_half;
+    printf("soft spi trans %d\n", len);
 
     // only MSB transfer is implemented
 

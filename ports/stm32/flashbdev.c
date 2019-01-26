@@ -129,6 +129,7 @@ static void flash_bdev_irq_handler(void);
 
 int32_t flash_bdev_ioctl(uint32_t op, uint32_t arg) {
     (void)arg;
+    printf("flash bdev ioctl %ld\n", op);
     switch (op) {
         case BDEV_IOCTL_INIT:
             flash_flags = 0;
