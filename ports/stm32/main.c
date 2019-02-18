@@ -147,6 +147,14 @@ static const char fresh_boot_py[] =
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\r\n"
+"import pyb\r\n"
+"import framebuf\r\n"
+"fbuf = bytearray(160*128)\r\n"
+"fb = framebuf.FrameBuffer(fbuf, 160, 128, framebuf.PL8)\r\n"
+"tft = pyb.SCREEN()\r\n"
+"fb.fill(8)\r\n"
+"fb.text('Hello Micropython!', 10, 50, 2)\r\n"
+"tft.show(fb, 1)\r\n"
 ;
 
 static const char fresh_pybcdc_inf[] =
@@ -257,6 +265,26 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
         f_open(&vfs_fat->fatfs, &fp, "/boot.py", FA_WRITE | FA_CREATE_ALWAYS);
         UINT n;
         f_write(&fp, fresh_boot_py, sizeof(fresh_boot_py) - 1 /* don't count null terminator */, &n);
+        // TODO check we could write n bytes
+        f_close(&fp);
+
+        // keep LED on for at least 200ms
+        sys_tick_wait_at_least(start_tick, 200);
+        led_state(PYB_LED_GREEN, 0);
+    }
+
+    res = f_stat(&vfs_fat->fatfs, "/main.py", &fno);
+    if (res != FR_OK) {
+        // doesn't exist, create fresh file
+
+        // LED on to indicate creation of boot.py
+        led_state(PYB_LED_GREEN, 1);
+        uint32_t start_tick = HAL_GetTick();
+
+        FIL fp;
+        f_open(&vfs_fat->fatfs, &fp, "/main.py", FA_WRITE | FA_CREATE_ALWAYS);
+        UINT n;
+        f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
         // TODO check we could write n bytes
         f_close(&fp);
 
@@ -424,7 +452,9 @@ STATIC uint update_reset_mode(uint reset_mode) {
 
 void stm32_main(uint32_t reset_mode) {
     // Enable caches and prefetch buffers
-
+    if (reset_mode > 3){
+        reset_mode = 1;
+    }
     #if defined(STM32F4)
 
     #if INSTRUCTION_CACHE_ENABLE
@@ -728,7 +758,6 @@ soft_reset:
             }
         }
     }
-
     // Main script is finished, so now go into REPL mode.
     // The REPL mode can change, or it can request a soft reset.
     for (;;) {
