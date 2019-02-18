@@ -48,7 +48,7 @@
 #define WAIT_SR_TIMEOUT (1000000)
 
 #define PAGE_SIZE (256) // maximum bytes we can write in one SPI transfer
-#define SECTOR_SIZE MP_SPIFLASH_ERASE_BLOCK_SIZE
+#define SECTOR_SIZE MP_SPIFLASH_ERASE_BLOCK_SIZE // 4096
 
 STATIC void mp_spiflash_acquire_bus(mp_spiflash_t *self) {
     const mp_spiflash_config_t *c = self->config;

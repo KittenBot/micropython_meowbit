@@ -3,12 +3,13 @@
 */
 
 /* Specify the memory areas */
+/*     FLASH_FS (rx)   : ORIGIN = 0x08020000, LENGTH = 128K */
+/* sectors 5 128K */
 MEMORY
 {
     FLASH (rx)      : ORIGIN = 0x08010000, LENGTH = 512K - 64K /* entire flash */
     FLASH_ISR (rx)  : ORIGIN = 0x08010000, LENGTH = 64K /* sector 4, sec 0~3 reserved for booloader */
-    FLASH_FS (rx)   : ORIGIN = 0x08020000, LENGTH = 128K /* sectors 5 128K */
-    FLASH_TEXT (rx) : ORIGIN = 0x08040000, LENGTH = 256K /* sectors 6,7 are 128K */
+    FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 384K /* sectors 5, 6,7 are 128K */
     RAM (xrw)       : ORIGIN = 0x20000194, LENGTH = 96K - 0x194
 }
 

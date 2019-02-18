@@ -235,14 +235,14 @@ STATIC mp_obj_t pyb_screen_make_new(const mp_obj_type_t *type, size_t n_args, si
 /// Show the hidden buffer on the screen.
 STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
     (void)n_args;
-    bool gs8code = 0;
+    bool usePalette = 0;
     pyb_screen_obj_t *screen = MP_OBJ_TO_PTR(args[0]);
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(args[1], &bufinfo, MP_BUFFER_READ);
     byte *p = bufinfo.buf;
 
     if (n_args >= 3){
-        gs8code = 1;
+        usePalette = 1;
     }
 
     uint8_t cmdBuf[] = {ST7735_RAMWR};
@@ -250,11 +250,11 @@ STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
 
     mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
     mp_hal_pin_high(screen->pin_dc); // DC=1
-    if (gs8code){
-        uint16_t tmp;
+    if (usePalette){
         for (int i=0;i<bufinfo.len;i++){
-            tmp = ((p[i] & 0xE0) << 8) | ((p[i] & 0x1C) << 6) | ((p[i] & 0x03) << 3);
-            HAL_SPI_Transmit(screen->spi->spi, (uint8_t*)&tmp, 2, 1000);
+            uint16_t color = palette[p[i] & 0xf];
+            uint8_t cc[] = {color >> 8, color & 0xff};
+            HAL_SPI_Transmit(screen->spi->spi, (uint8_t*)&cc, 2, 1000);
         }
     } else {
         HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
@@ -266,11 +266,11 @@ STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_screen_show_obj, 2, 2, pyb_screen_show);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_screen_show_obj, 2, 3, pyb_screen_show);
 
 STATIC const mp_rom_map_elem_t pyb_screen_locals_dict_table[] = {
     // instance methods
-    { MP_ROM_QSTR(MP_QSTR_show), MP_ROM_PTR(&pyb_screen_show_obj) }
+    { MP_ROM_QSTR(MP_QSTR_show), MP_ROM_PTR(&pyb_screen_show_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_screen_locals_dict, pyb_screen_locals_dict_table);

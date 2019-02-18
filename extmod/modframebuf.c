@@ -56,7 +56,7 @@ typedef struct _mp_framebuf_p_t {
 #define FRAMEBUF_RGB565   (1)
 #define FRAMEBUF_GS2_HMSB (5)
 #define FRAMEBUF_GS4_HMSB (2)
-#define FRAMEBUF_GS8      (6)
+#define FRAMEBUF_PL8      (6)
 #define FRAMEBUF_MHLSB    (3)
 #define FRAMEBUF_MHMSB    (4)
 
@@ -214,11 +214,11 @@ STATIC void gs4_hmsb_fill_rect(const mp_obj_framebuf_t *fb, int x, int y, int w,
 }
 
 // Functions for GS8 format
-#define COL08(r, g, b) ((((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6))
-#define COL8(c) COL08((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff)
+//#define COL08(r, g, b) ((((r) >> 5) << 5) | (((g) >> 5) << 2) | ((b) >> 6))
+//#define COL8(c) COL08((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff)
 STATIC void gs8_setpixel(const mp_obj_framebuf_t *fb, int x, int y, uint32_t col) {
     uint8_t *pixel = &((uint8_t*)fb->buf)[(x + y * fb->stride)];
-    *pixel = COL8(col) & 0xff;
+    *pixel = (col & 0xff);
 }
 
 STATIC uint32_t gs8_getpixel(const mp_obj_framebuf_t *fb, int x, int y) {
@@ -238,7 +238,7 @@ STATIC mp_framebuf_p_t formats[] = {
     [FRAMEBUF_RGB565] = {rgb565_setpixel, rgb565_getpixel, rgb565_fill_rect},
     [FRAMEBUF_GS2_HMSB] = {gs2_hmsb_setpixel, gs2_hmsb_getpixel, gs2_hmsb_fill_rect},
     [FRAMEBUF_GS4_HMSB] = {gs4_hmsb_setpixel, gs4_hmsb_getpixel, gs4_hmsb_fill_rect},
-    [FRAMEBUF_GS8] = {gs8_setpixel, gs8_getpixel, gs8_fill_rect},
+    [FRAMEBUF_PL8] = {gs8_setpixel, gs8_getpixel, gs8_fill_rect},
     [FRAMEBUF_MHLSB] = {mono_horiz_setpixel, mono_horiz_getpixel, mono_horiz_fill_rect},
     [FRAMEBUF_MHMSB] = {mono_horiz_setpixel, mono_horiz_getpixel, mono_horiz_fill_rect},
 };
@@ -300,7 +300,7 @@ STATIC mp_obj_t framebuf_make_new(const mp_obj_type_t *type, size_t n_args, size
         case FRAMEBUF_GS4_HMSB:
             o->stride = (o->stride + 1) & ~1;
             break;
-        case FRAMEBUF_GS8:
+        case FRAMEBUF_PL8:
             break;
         default:
             mp_raise_ValueError("invalid format");
@@ -640,7 +640,7 @@ STATIC const mp_rom_map_elem_t framebuf_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_RGB565), MP_ROM_INT(FRAMEBUF_RGB565) },
     { MP_ROM_QSTR(MP_QSTR_GS2_HMSB), MP_ROM_INT(FRAMEBUF_GS2_HMSB) },
     { MP_ROM_QSTR(MP_QSTR_GS4_HMSB), MP_ROM_INT(FRAMEBUF_GS4_HMSB) },
-    { MP_ROM_QSTR(MP_QSTR_GS8), MP_ROM_INT(FRAMEBUF_GS8) },
+    { MP_ROM_QSTR(MP_QSTR_PL8), MP_ROM_INT(FRAMEBUF_PL8) },
     { MP_ROM_QSTR(MP_QSTR_MONO_HLSB), MP_ROM_INT(FRAMEBUF_MHLSB) },
     { MP_ROM_QSTR(MP_QSTR_MONO_HMSB), MP_ROM_INT(FRAMEBUF_MHMSB) },
 };
