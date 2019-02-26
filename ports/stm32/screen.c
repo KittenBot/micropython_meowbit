@@ -13,8 +13,8 @@
 #include "screen.h"
 
 #define LCD_INSTR (0)
-#define LCD_CHAR_BUF_W (16)
-#define LCD_CHAR_BUF_H (4)
+//#define LCD_CHAR_BUF_W (16)
+//#define LCD_CHAR_BUF_H (4)
 
 #define COL0(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
 #define COL(c) COL0((c >> 16) & 0xff, (c >> 8) & 0xff, c & 0xff)
@@ -53,10 +53,10 @@ typedef struct _pyb_screen_obj_t {
     const pin_obj_t *pin_bl;
 
     // character buffer for stdout-like output
-    char char_buffer[LCD_CHAR_BUF_W * LCD_CHAR_BUF_H];
-    int line;
-    int column;
-    int next_line;
+    //char char_buffer[LCD_CHAR_BUF_W * LCD_CHAR_BUF_H];
+    //int line;
+    //int column;
+    //int next_line;
 
 } pyb_screen_obj_t;
 

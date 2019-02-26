@@ -157,6 +157,77 @@ static const char fresh_main_py[] =
 "tft.show(fb, 1)\r\n"
 ;
 
+static const char fresh_mpu6050_py[] =
+"class accel():\r\n"
+"    def __init__(self, i2c, addr=0x68):\r\n"
+"        self.iic = i2c\r\n"
+"        self.addr = addr\r\n"
+"        self.iic.init()\r\n"
+"        self.iic.send(bytearray([107, 0]), self.addr)\r\n"
+"    def get_raw_values(self):\r\n"
+"        a = self.iic.mem_read(14, self.addr, 0x3B)\r\n"
+"        return a\r\n"
+"    def get_ints(self):\r\n"
+"        b = self.get_raw_values()\r\n"
+"        c = []\r\n"
+"        for i in b:\r\n"
+"            c.append(i)\r\n"
+"        return c\r\n"
+"    def bytes_toint(self, firstbyte, secondbyte):\r\n"
+"        if not firstbyte & 0x80:\r\n"
+"            return firstbyte << 8 | secondbyte\r\n"
+"        return - (((firstbyte ^ 255) << 8) | (secondbyte ^ 255) + 1)\r\n"
+"    def get_ac_x(self):                  # 单独读取x轴加速度值\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        ac_x = 0\r\n"
+"        ac_x = self.bytes_toint(raw_ints[0], raw_ints[1])\r\n"
+"        return ac_x\r\n"
+"    def get_ac_y(self):\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        ac_y = 0\r\n"
+"        ac_y = self.bytes_toint(raw_ints[2], raw_ints[3])\r\n"
+"        return ac_y\r\n"
+"    def get_ac_z(self):\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        ac_z = 0\r\n"
+"        ac_z = self.bytes_toint(raw_ints[4], raw_ints[5])\r\n"
+"        return ac_z\r\n"
+"    def get_g_x(self):                        # 单独读取重力加速度值\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        g_x = 0\r\n"
+"        g_x = self.bytes_toint(raw_ints[8], raw_ints[9])\r\n"
+"        return g_x\r\n"
+"    def get_g_y(self):\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        g_y = 0\r\n"
+"        g_y = self.bytes_toint(raw_ints[10], raw_ints[11])\r\n"
+"        return g_y\r\n"
+"    def get_g_z(self):\r\n"
+"        raw_ints = self.get_raw_values() \r\n"
+"        g_z = 0\r\n"
+"        g_z = self.bytes_toint(raw_ints[12], raw_ints[13])\r\n"
+"        return g_z\r\n"
+"    def get_values(self):                    # 同时读取\r\n"
+"        raw_ints = self.get_raw_values()\r\n"
+"        vals = {}\r\n"
+"        vals['AcX'] = self.bytes_toint(raw_ints[0], raw_ints[1])\r\n"
+"        vals['AcY'] = self.bytes_toint(raw_ints[2], raw_ints[3])\r\n"
+"        vals['AcZ'] = self.bytes_toint(raw_ints[4], raw_ints[5])\r\n"
+"        vals['Tmp'] = self.bytes_toint(raw_ints[6], raw_ints[7]) / 340.00 + 36.53\r\n"
+"        vals['GyX'] = self.bytes_toint(raw_ints[8], raw_ints[9])\r\n"
+"        vals['GyY'] = self.bytes_toint(raw_ints[10], raw_ints[11])\r\n"
+"        vals['GyZ'] = self.bytes_toint(raw_ints[12], raw_ints[13])\r\n"
+"        return vals  # returned in range of Int16\r\n"
+"        # -32768 to 32767\r\n"
+"    # 同时读取持续打印数据用于测试\r\n"
+"    def val_test(self):  # ONLY FOR TESTING! Also, fast reading sometimes crashes IIC\r\n"
+"        from time import sleep\r\n"
+"        while 1:\r\n"
+"            print(self.get_values())\r\n"
+"            sleep(0.2)"
+;
+
+
 static const char fresh_pybcdc_inf[] =
 #include "genhdr/pybcdc_inf.h"
 ;
@@ -212,6 +283,11 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
         UINT n;
         f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
         // TODO check we could write n bytes
+        f_close(&fp);
+
+        // create mpu6050 lib
+        f_open(&vfs_fat->fatfs, &fp, "/mpu6050.py", FA_WRITE | FA_CREATE_ALWAYS);
+        f_write(&fp, fresh_mpu6050_py, sizeof(fresh_mpu6050_py) - 1 /* don't count null terminator */, &n);
         f_close(&fp);
 
         // create .inf driver file
@@ -290,6 +366,26 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
 
         // keep LED on for at least 200ms
         sys_tick_wait_at_least(start_tick, 200);
+        led_state(PYB_LED_GREEN, 0);
+    }
+
+    res = f_stat(&vfs_fat->fatfs, "/mpu6050.py", &fno);
+    if (res != FR_OK) {
+        // doesn't exist, create fresh file
+
+        // LED on to indicate creation of boot.py
+        led_state(PYB_LED_GREEN, 1);
+        uint32_t start_tick = HAL_GetTick();
+
+        FIL fp;
+        f_open(&vfs_fat->fatfs, &fp, "/mpu6050.py", FA_WRITE | FA_CREATE_ALWAYS);
+        UINT n;
+        f_write(&fp, fresh_mpu6050_py, sizeof(fresh_mpu6050_py) - 1 /* don't count null terminator */, &n);
+        // TODO check we could write n bytes
+        f_close(&fp);
+
+        // keep LED on for at least 200ms
+        sys_tick_wait_at_least(start_tick, 500);
         led_state(PYB_LED_GREEN, 0);
     }
 
