@@ -85,6 +85,8 @@ extern struct _spi_bdev_t spi_bdev;
 
 #define MICROPY_HW_LED1             (pin_B5) // Active LED
 #define MICROPY_HW_LED2             (pin_B4) // Boot LED
+#define MICROPY_HW_LED1_PWM         { TIM3, 3, TIM_CHANNEL_2, GPIO_AF2_TIM3 }
+#define MICROPY_HW_LED2_PWM         { TIM3, 3, TIM_CHANNEL_1, GPIO_AF2_TIM3 }
 #define MICROPY_HW_LED_ON(pin)      (mp_hal_pin_high(pin))
 #define MICROPY_HW_LED_OFF(pin)     (mp_hal_pin_low(pin))
 
