@@ -157,6 +157,51 @@ static const char fresh_main_py[] =
 "tft.show(fb, 1)\r\n"
 ;
 
+static const char fresh_buzz_py[] =
+"from pyb import Pin, Timer, delay\r\n"
+"\r\n"
+"Do = 261\r\n"
+"Re = 294\r\n"
+"Mi = 329\r\n"
+"Fa = 349\r\n"
+"So = 392\r\n"
+"Ra = 440\r\n"
+"Xi = 494\r\n"
+"\r\n"
+"buzz = Pin('BUZZ')\r\n"
+"tim = Timer(4, freq=3000)\r\n"
+"ch = tim.channel(3, Timer.PWM, pin=buzz)\r\n"
+"noteMap = [440, 494, 262, 294, 330, 349, 392]\r\n"
+"\r\n"
+"def tone(freq, d=1000):\r\n"
+"    tim.freq(freq)\r\n"
+"    ch.pulse_width_percent(30)\r\n"
+"    delay(d)\r\n"
+"    ch.pulse_width_percent(0)\r\n"
+"\r\n"
+"def music(m):\r\n"
+"    m = m.lower()\r\n"
+"    octave = 4\r\n"
+"    duration = 500\r\n"
+"    n = 0\r\n"
+"    while n < len(m):\r\n"
+"        note = ord(m[n])\r\n"
+"        if note >= ord('a') and note <= ord('g'):\r\n"
+"            freq = noteMap[note-ord('a')]\r\n"
+"        elif note == ord('r'):\r\n"
+"            freq = 0\r\n"
+"        elif note >= ord('2') and note <= ord('6'):\r\n"
+"            octave = note - ord('0')\r\n"
+"        elif note == ord(':'):\r\n"
+"            n+=1\r\n"
+"            note = ord(m[n])\r\n"
+"            duration = (note - ord('0'))*125\r\n"
+"        elif note == ord(' '):\r\n"
+"            freq *= pow(2, octave-4)\r\n"
+"            tone(freq, duration)\r\n"
+"        n+=1\r\n"
+;
+
 static const char fresh_mpu6050_py[] =
 "class accel():\r\n"
 "    def __init__(self, i2c, addr=0x68):\r\n"
@@ -290,6 +335,11 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
         f_write(&fp, fresh_mpu6050_py, sizeof(fresh_mpu6050_py) - 1 /* don't count null terminator */, &n);
         f_close(&fp);
 
+        // create buzz lib
+        f_open(&vfs_fat->fatfs, &fp, "/buzz.py", FA_WRITE | FA_CREATE_ALWAYS);
+        f_write(&fp, fresh_buzz_py, sizeof(fresh_buzz_py) - 1 /* don't count null terminator */, &n);
+        f_close(&fp);
+
         // create .inf driver file
         f_open(&vfs_fat->fatfs, &fp, "/pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
         f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
@@ -381,6 +431,26 @@ MP_NOINLINE STATIC bool init_flash_fs(uint reset_mode) {
         f_open(&vfs_fat->fatfs, &fp, "/mpu6050.py", FA_WRITE | FA_CREATE_ALWAYS);
         UINT n;
         f_write(&fp, fresh_mpu6050_py, sizeof(fresh_mpu6050_py) - 1 /* don't count null terminator */, &n);
+        // TODO check we could write n bytes
+        f_close(&fp);
+
+        // keep LED on for at least 200ms
+        sys_tick_wait_at_least(start_tick, 500);
+        led_state(PYB_LED_GREEN, 0);
+    }
+
+    res = f_stat(&vfs_fat->fatfs, "/buzz.py", &fno);
+    if (res != FR_OK) {
+        // doesn't exist, create fresh file
+
+        // LED on to indicate creation of boot.py
+        led_state(PYB_LED_GREEN, 1);
+        uint32_t start_tick = HAL_GetTick();
+
+        FIL fp;
+        f_open(&vfs_fat->fatfs, &fp, "/buzz.py", FA_WRITE | FA_CREATE_ALWAYS);
+        UINT n;
+        f_write(&fp, fresh_buzz_py, sizeof(fresh_buzz_py) - 1 /* don't count null terminator */, &n);
         // TODO check we could write n bytes
         f_close(&fp);
 
