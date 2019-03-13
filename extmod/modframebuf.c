@@ -39,6 +39,7 @@
 
 #include "ports/stm32/font_petme128_8x8.h"
 #include "bmp.h"
+#include "gif.h"
 
 typedef struct _mp_obj_framebuf_t {
     mp_obj_base_t base;
@@ -619,7 +620,7 @@ STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
     //uint8_t  yok=1;			   
 
     uint8_t *bmpbuf;
-    uint8_t biCompression=0;
+    // uint8_t biCompression=0;
 
     uint16_t rowlen;
     BITMAPINFO *pbmp;
@@ -632,7 +633,7 @@ STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
         pbmp=(BITMAPINFO*)databuf;
         count=pbmp->bmfHeader.bfOffBits;        	//数据偏移,得到数据段的开始地址
         color_byte=pbmp->bmiHeader.biBitCount/8;	//彩色位 16/24/32  
-        biCompression=pbmp->bmiHeader.biCompression;//压缩方式
+        // biCompression=pbmp->bmiHeader.biCompression;//压缩方式
         imgWidth = pbmp->bmiHeader.biWidth;
         imgHeight = pbmp->bmiHeader.biHeight;
 
@@ -647,6 +648,10 @@ STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
         //对于尺寸小于等于设定尺寸的图片,进行快速解码
         //realy=(y*picinfo.Div_Fac)>>13;
         bmpbuf=databuf;
+
+        if (color_byte!=3 && color_byte!=4){
+            printf("only support 24/32 bit bmp\r\n");
+        }
 
         while(1){
             while(count<readlen){  //读取一簇1024扇区 (SectorsPerClust 每簇扇区数)
