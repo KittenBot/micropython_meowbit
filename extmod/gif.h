@@ -63,8 +63,8 @@ typedef struct __attribute__((packed))
 {
 	LogicalScreenDescriptor gifLSD;	//逻辑屏幕描述块
 	ImageScreenDescriptor gifISD;	//图像描述快
-	uint16_t colortbl[256];				//当前使用颜色表
-	uint16_t bkpcolortbl[256];			//备份颜色表.当存在局部颜色表时使用
+	uint32_t colortbl[256];				//当前使用颜色表
+	uint32_t bkpcolortbl[256];			//备份颜色表.当存在局部颜色表时使用
 	uint16_t numcolors;					//颜色表大小
 	uint16_t delay;					    //延迟时间
 	LZW_INFO *lzw;					//LZW信息
