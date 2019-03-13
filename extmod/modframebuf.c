@@ -31,7 +31,14 @@
 
 #if MICROPY_PY_FRAMEBUF
 
+// defined for fs operation
+#include "lib/oofatfs/ff.h"
+
+#include "extmod/vfs.h"
+#include "extmod/vfs_fat.h"
+
 #include "ports/stm32/font_petme128_8x8.h"
+#include "bmp.h"
 
 typedef struct _mp_obj_framebuf_t {
     mp_obj_base_t base;
@@ -587,6 +594,124 @@ STATIC mp_obj_t framebuf_text(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_text_obj, 4, 5, framebuf_text);
 
+extern fs_user_mount_t fs_user_mount_flash;
+STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
+    (void)n_args;
+    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(args[0]);
+    const char *filename = mp_obj_str_get_str(args[1]);
+    
+    fs_user_mount_t *vfs_fat = &fs_user_mount_flash;
+    uint8_t res;
+    UINT br;
+    uint8_t rgb ,color_byte;
+    uint32_t color;
+    uint16_t x, y;
+    uint16_t count;
+    FIL fp;
+    uint8_t * databuf;
+    uint16_t readlen=BMP_DBUF_SIZE;
+    uint32_t imgWidth, imgHeight;
+
+    uint16_t countpix=0;//记录像素 
+    //x,y的实际坐标	
+    //uint16_t  realx=0;
+    //uint16_t realy=0;
+    //uint8_t  yok=1;			   
+
+    uint8_t *bmpbuf;
+    uint8_t biCompression=0;
+
+    uint16_t rowlen;
+    BITMAPINFO *pbmp;
+
+    databuf = (uint8_t*)malloc(readlen);
+    res = f_open(&vfs_fat->fatfs, &fp, filename, FA_READ);
+    if (res == 0){
+        res = f_read(&fp, databuf, readlen, &br);
+        
+        pbmp=(BITMAPINFO*)databuf;
+        count=pbmp->bmfHeader.bfOffBits;        	//数据偏移,得到数据段的开始地址
+        color_byte=pbmp->bmiHeader.biBitCount/8;	//彩色位 16/24/32  
+        biCompression=pbmp->bmiHeader.biCompression;//压缩方式
+        imgWidth = pbmp->bmiHeader.biWidth;
+        imgHeight = pbmp->bmiHeader.biHeight;
+
+        // printf("bmp %d %d %ld %ld\n", biCompression, color_byte, pbmp->bmiHeader.biHeight, pbmp->bmiHeader.biWidth);
+
+        //开始解码BMP   
+        rowlen = imgWidth * color_byte;
+        color=0;//颜色清空
+        x=0;
+        y=imgHeight;
+        rgb=0;
+        //对于尺寸小于等于设定尺寸的图片,进行快速解码
+        //realy=(y*picinfo.Div_Fac)>>13;
+        bmpbuf=databuf;
+
+        while(1){
+            while(count<readlen){  //读取一簇1024扇区 (SectorsPerClust 每簇扇区数)
+                if(color_byte==3){   //24位颜色图
+                    switch (rgb){
+                        case 0:				  
+                            color=bmpbuf[count]; //B
+                            break ;	   
+                        case 1: 	 
+                            color+=((uint16_t)bmpbuf[count]<<8);//G
+                            break;	  
+                        case 2 : 
+                            color+=((uint32_t)bmpbuf[count]<<16);//R	  
+                            break ;			
+                    }
+                } else if(color_byte==4){//32位颜色图
+					switch (rgb){
+						case 0:				  
+							color=bmpbuf[count]; //B
+							break ;	   
+						case 1: 	 
+							color+=((uint16_t)bmpbuf[count]<<8);//G
+							break;	  
+						case 2 : 
+							color+=((uint32_t)bmpbuf[count]<<16);//R	  
+							break ;			
+						case 3 :
+							//alphabend=bmpbuf[count];//不读取  ALPHA通道
+							break ;  		  	 
+					}	
+				}
+                rgb++;	  
+                count++;
+                if(rgb==color_byte){ //水平方向读取到1像素数数据后显示	
+                    if(x < imgWidth){	
+                        setpixel(self, x, y, color);
+                    }
+                    x++;//x轴增加一个像素
+                    color=0x00;
+                    rgb=0;
+                }
+                countpix++;//像素累加
+                if(countpix>=rowlen){//水平方向像素值到了.换行
+                    y--; 
+                    if(y==0)break;
+                    x=0; 
+                    countpix=0;
+                    color=0x00;
+                    rgb=0;
+                }
+            }
+            res=f_read(&fp, databuf, readlen, &br);//读出readlen个字节
+            if(br!=readlen)readlen=br;	//最后一批数据		  
+            if(res||br==0)break;		//读取出错
+            bmpbuf=databuf;
+            count=0;
+        }
+        f_close(&fp);
+    }
+    free(databuf);
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_loadbmp_obj, 2, 3, framebuf_loadbmp);
+
 STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&framebuf_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill_rect), MP_ROM_PTR(&framebuf_fill_rect_obj) },
@@ -598,6 +723,7 @@ STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_blit), MP_ROM_PTR(&framebuf_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_scroll), MP_ROM_PTR(&framebuf_scroll_obj) },
     { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&framebuf_text_obj) },
+    { MP_ROM_QSTR(MP_QSTR_loadbmp), MP_ROM_PTR(&framebuf_loadbmp_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(framebuf_locals_dict, framebuf_locals_dict_table);
 
