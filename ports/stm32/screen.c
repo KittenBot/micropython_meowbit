@@ -279,10 +279,14 @@ STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_screen_show_obj, 2, 3, pyb_screen_show);
 
-uint8_t showBmp(char * filename){
+STATIC mp_obj_t pyb_screen_showBMP(size_t n_args, const mp_obj_t *args) {
+    (void)n_args;
+    pyb_screen_obj_t *screen = MP_OBJ_TO_PTR(args[0]);
+    const char *filename = mp_obj_str_get_str(args[1]);
+    
     fs_user_mount_t *vfs_fat = &fs_user_mount_flash;
     uint8_t res;
-    uint16_t br;
+    UINT br;
     uint8_t rgb ,color_byte;
     uint16_t x, y, color;
     uint16_t count;
@@ -302,10 +306,10 @@ uint8_t showBmp(char * filename){
     uint16_t rowlen;
     BITMAPINFO *pbmp;
 
-    databuf = (uint8_t*)malloc(BMP_DBUF_SIZE);
+    databuf = (uint8_t*)malloc(readlen);
     res = f_open(&vfs_fat->fatfs, &fp, filename, FA_READ);
     if (res == 0){
-        f_read(&fp, databuf, readlen, (UINT*)&br);
+        res = f_read(&fp, databuf, readlen, &br);
         
         pbmp=(BITMAPINFO*)databuf;
         count=pbmp->bmfHeader.bfOffBits;        	//数据偏移,得到数据段的开始地址
@@ -313,6 +317,7 @@ uint8_t showBmp(char * filename){
         biCompression=pbmp->bmiHeader.biCompression;//压缩方式
         picinfo.ImgHeight=pbmp->bmiHeader.biHeight;	//得到图片高度
         picinfo.ImgWidth=pbmp->bmiHeader.biWidth;  	//得到图片宽度 
+        printf("bmp %d %d %ld %ld\n", biCompression, color_byte, pbmp->bmiHeader.biHeight, pbmp->bmiHeader.biWidth);
         // ai_draw_init();//初始化智能画图			
         //水平像素必须是4的倍数!!
         if((picinfo.ImgWidth*color_byte)%4)rowlen=((picinfo.ImgWidth*color_byte)/4+1)*4;
@@ -325,6 +330,12 @@ uint8_t showBmp(char * filename){
         //对于尺寸小于等于设定尺寸的图片,进行快速解码
         //realy=(y*picinfo.Div_Fac)>>13;
         bmpbuf=databuf;
+
+        // init write
+        uint8_t cmdBuf[] = {ST7735_RAMWR};
+        send_cmd(screen, cmdBuf, 1);
+        mp_hal_pin_low(screen->pin_cs1); // CS=0; enable
+        mp_hal_pin_high(screen->pin_dc); // DC=1
 
         while(1){
             while(count<readlen){  //读取一簇1024扇区 (SectorsPerClust 每簇扇区数)
@@ -382,6 +393,8 @@ uint8_t showBmp(char * filename){
                 count++;
                 if(rgb==color_byte){ //水平方向读取到1像素数数据后显示	
                     if(x<picinfo.ImgWidth){	
+                        uint8_t cc[] = {color >> 8, color & 0xff};
+                        HAL_SPI_Transmit(screen->spi->spi, (uint8_t*)&cc, 2, 1000);
                         //realx=(x*picinfo.Div_Fac)>>13;//x轴实际值
                         // todo: draw to screen
                         //if(is_element_ok(realx,realy,1)&&yok){//符合条件
@@ -398,7 +411,7 @@ uint8_t showBmp(char * filename){
                 countpix++;//像素累加
                 if(countpix>=rowlen){//水平方向像素值到了.换行
                     y--; 
-                    if(y==0)break;			 
+                    if(y==0)break;
                     //realy=(y*picinfo.Div_Fac)>>13;//实际y值改变	 
                     //if(is_element_ok(realx,realy,0))yok=1;//此处不改变picinfo.staticx,y的值	 
                     //else yok=0; 
@@ -408,23 +421,25 @@ uint8_t showBmp(char * filename){
                     rgb=0;
                 }
             }
-            res=f_read(&fp, databuf, readlen, (UINT*)&br);//读出readlen个字节
+            res=f_read(&fp, databuf, readlen, &br);//读出readlen个字节
             if(br!=readlen)readlen=br;	//最后一批数据		  
             if(res||br==0)break;		//读取出错
             bmpbuf=databuf;
             count=0;
         }
-
-
+        f_close(&fp);
     }
     free(databuf);
-    return res;
+    mp_hal_pin_high(screen->pin_cs1); // CS=1; disable
+    return mp_const_none;
 }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(pyb_screen_showbmp_obj, 2, 3, pyb_screen_showBMP);
 
 STATIC const mp_rom_map_elem_t pyb_screen_locals_dict_table[] = {
     // instance methods
     { MP_ROM_QSTR(MP_QSTR_show), MP_ROM_PTR(&pyb_screen_show_obj) },
+    { MP_ROM_QSTR(MP_QSTR_showBMP), MP_ROM_PTR(&pyb_screen_showbmp_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(pyb_screen_locals_dict, pyb_screen_locals_dict_table);
