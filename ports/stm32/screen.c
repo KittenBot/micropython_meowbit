@@ -9,6 +9,7 @@
 #include "pin.h"
 #include "bufhelper.h"
 #include "spi.h"
+#include "dma.h"
 #include "font_petme128_8x8.h"
 #include "screen.h"
 
@@ -258,7 +259,8 @@ STATIC mp_obj_t pyb_screen_show(size_t n_args, const mp_obj_t *args) {
             HAL_SPI_Transmit(screen->spi->spi, (uint8_t*)&cc, 2, 1000);
         }
     } else {
-        HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
+        // HAL_SPI_Transmit(screen->spi->spi, p, bufinfo.len, 1000);
+        spi_transfer(screen->spi, bufinfo.len, p, NULL, 1000);
     }
 
 
