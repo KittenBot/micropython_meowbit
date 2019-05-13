@@ -124,10 +124,11 @@ class RobotBit(object):
     def servo(self, index, degree):
         # 50hz: 20,000 us
         v_us = (degree*1000/180+1000)
-        value = int(v_us*4096/20000)
+        value = int(v_us*4096/20000) * 2
         self.set_pwm(index+7, 0, value)
         
     def motor(self, index, speed):
+        speed = speed * 16 # map from 256 to 4096
         if index>4 or index<=0:
             return
         pp = (index-1)*2
