@@ -29,11 +29,13 @@ extern struct _spi_bdev_t spi_bdev;
 
 // HSE is 8MHz, CPU freq set to 84MHz
 // #define MICROPY_HW_CLK_PLLM (8)
+// 12M /12 * 336 / 4 = 84Mhz
 #define MICROPY_HW_CLK_PLLM (12)
 #define MICROPY_HW_CLK_PLLN (336)
 #define MICROPY_HW_CLK_PLLP (RCC_PLLP_DIV4)
 #define MICROPY_HW_CLK_PLLQ (7)
-#define MICROPY_HW_CLK_LAST_FREQ (1)
+// #define MICROPY_HW_CLK_LAST_FREQ (1)
+
 
 #define MICROPY_HW_RTC_USE_LSE      (0)
 
@@ -47,8 +49,8 @@ extern struct _spi_bdev_t spi_bdev;
 #define MICROPY_HW_UART6_RX     (pin_C7)
 // UART 2 connects to the STM32F103 (STLINK) on the Nucleo board
 // and this is exposed as a USB Serial port.
-#define MICROPY_HW_UART_REPL        PYB_UART_2
-#define MICROPY_HW_UART_REPL_BAUD   115200
+// #define MICROPY_HW_UART_REPL        PYB_UART_2
+// #define MICROPY_HW_UART_REPL_BAUD   115200
 
 // I2C busses
 #define MICROPY_HW_I2C1_SCL (pin_B6)        // Arduino D15, pin 3 on CN10
