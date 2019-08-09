@@ -632,7 +632,7 @@ STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
     uint16_t rowlen;
     BITMAPINFO *pbmp;
 
-    databuf = (uint8_t*)malloc(readlen);
+    databuf = (uint8_t*)m_malloc(readlen);
     res = f_open(&vfs_fat->fatfs, &fp, filename, FA_READ);
     if (res == 0){
         res = f_read(&fp, databuf, readlen, &br);
@@ -718,7 +718,7 @@ STATIC mp_obj_t framebuf_loadbmp(size_t n_args, const mp_obj_t *args) {
         }
         f_close(&fp);
     }
-    free(databuf);
+    m_free(databuf);
 
     return mp_const_none;
 }
@@ -1176,11 +1176,11 @@ STATIC mp_obj_t framebuf_loadgif(size_t n_args, const mp_obj_t *args) {
         x = mp_obj_get_int(args[3]);
         y = mp_obj_get_int(args[4]);
     }
-    mygif89a=(gif89a*)malloc(sizeof(gif89a));
+    mygif89a=(gif89a*)m_malloc(sizeof(gif89a));
     if (!mygif89a){
         res = -99;
     }
-    mygif89a->lzw=(LZW_INFO*)malloc(sizeof(LZW_INFO));
+    mygif89a->lzw=(LZW_INFO*)m_malloc(sizeof(LZW_INFO));
     if(mygif89a->lzw==NULL){
         res = -98;
     }
@@ -1221,8 +1221,8 @@ STATIC mp_obj_t framebuf_loadgif(size_t n_args, const mp_obj_t *args) {
         }
     }
     f_close(&gfile);
-    free(mygif89a->lzw);
-    free(mygif89a); 
+    m_free(mygif89a->lzw);
+    m_free(mygif89a); 
     return mp_const_none;
 }
 
