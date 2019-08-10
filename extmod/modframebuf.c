@@ -1228,6 +1228,42 @@ STATIC mp_obj_t framebuf_loadgif(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_loadgif_obj, 3, 5, framebuf_loadgif);
 
+STATIC mp_obj_t framebuf_circle(size_t n_args, const mp_obj_t *args) {
+    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(args[0]);
+    mp_int_t x0 = mp_obj_get_int(args[1]);
+    mp_int_t y0 = mp_obj_get_int(args[2]);
+    mp_int_t r = mp_obj_get_int(args[3]);
+    mp_int_t col = mp_obj_get_int(args[4]);
+    // fb, x0, 0, r, color
+    int f = 1 - r;
+    int ddF_x = 1;
+    int ddF_y = -2 * r;
+    int x = 0;
+	int y = r;
+    while (x < y){
+        if (f >= 0) {
+			y--;
+			ddF_y += 2;
+			f += ddF_y;
+		}
+        x++;
+		ddF_x += 2;
+		f += ddF_x;
+        setpixel(self, x0 + x, y0 + y, col);
+        setpixel(self, x0 - x, y0 + y, col);
+        setpixel(self, x0 + x, y0 - y, col);
+        setpixel(self, x0 - x, y0 - y, col);
+        setpixel(self, x0 + y, y0 + x, col);
+        setpixel(self, x0 - y, y0 + x, col);
+        setpixel(self, x0 + y, y0 - x, col);
+        setpixel(self, x0 - y, y0 - x, col);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_circle_obj, 5, 6, framebuf_circle);
+
+
 STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&framebuf_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill_rect), MP_ROM_PTR(&framebuf_fill_rect_obj) },
@@ -1241,6 +1277,7 @@ STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&framebuf_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_loadbmp), MP_ROM_PTR(&framebuf_loadbmp_obj) },
     { MP_ROM_QSTR(MP_QSTR_loadgif), MP_ROM_PTR(&framebuf_loadgif_obj) },
+    { MP_ROM_QSTR(MP_QSTR_circle), MP_ROM_PTR(&framebuf_circle_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(framebuf_locals_dict, framebuf_locals_dict_table);
 
