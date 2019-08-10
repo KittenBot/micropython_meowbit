@@ -416,15 +416,7 @@ STATIC mp_obj_t framebuf_rect(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_rect_obj, 6, 6, framebuf_rect);
 
-STATIC mp_obj_t framebuf_line(size_t n_args, const mp_obj_t *args) {
-    (void)n_args;
-
-    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(args[0]);
-    mp_int_t x1 = mp_obj_get_int(args[1]);
-    mp_int_t y1 = mp_obj_get_int(args[2]);
-    mp_int_t x2 = mp_obj_get_int(args[3]);
-    mp_int_t y2 = mp_obj_get_int(args[4]);
-    mp_int_t col = mp_obj_get_int(args[5]);
+static void drawLine(mp_obj_framebuf_t *self, mp_int_t x1, mp_int_t y1, mp_int_t x2, mp_int_t y2, mp_int_t col){
 
     mp_int_t dx = x2 - x1;
     mp_int_t sx;
@@ -477,7 +469,18 @@ STATIC mp_obj_t framebuf_line(size_t n_args, const mp_obj_t *args) {
     if (0 <= x2 && x2 < self->width && 0 <= y2 && y2 < self->height) {
         setpixel(self, x2, y2, col);
     }
+}
 
+STATIC mp_obj_t framebuf_line(size_t n_args, const mp_obj_t *args) {
+    (void)n_args;
+
+    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(args[0]);
+    mp_int_t x1 = mp_obj_get_int(args[1]);
+    mp_int_t y1 = mp_obj_get_int(args[2]);
+    mp_int_t x2 = mp_obj_get_int(args[3]);
+    mp_int_t y2 = mp_obj_get_int(args[4]);
+    mp_int_t col = mp_obj_get_int(args[5]);
+    drawLine(self, x1, y1, x2, y2, col);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_line_obj, 6, 6, framebuf_line);
@@ -1234,12 +1237,19 @@ STATIC mp_obj_t framebuf_circle(size_t n_args, const mp_obj_t *args) {
     mp_int_t y0 = mp_obj_get_int(args[2]);
     mp_int_t r = mp_obj_get_int(args[3]);
     mp_int_t col = mp_obj_get_int(args[4]);
+    mp_int_t fill = 0;
+    if (n_args == 6){
+        fill = mp_obj_get_int(args[5]);
+    }
     // fb, x0, 0, r, color
     int f = 1 - r;
     int ddF_x = 1;
     int ddF_y = -2 * r;
     int x = 0;
 	int y = r;
+    if (fill){
+        fill_rect(self, x0, y0 - r, 1, 2*r + 1, col);
+    }
     while (x < y){
         if (f >= 0) {
 			y--;
@@ -1249,20 +1259,112 @@ STATIC mp_obj_t framebuf_circle(size_t n_args, const mp_obj_t *args) {
         x++;
 		ddF_x += 2;
 		f += ddF_x;
-        setpixel(self, x0 + x, y0 + y, col);
-        setpixel(self, x0 - x, y0 + y, col);
-        setpixel(self, x0 + x, y0 - y, col);
-        setpixel(self, x0 - x, y0 - y, col);
-        setpixel(self, x0 + y, y0 + x, col);
-        setpixel(self, x0 - y, y0 + x, col);
-        setpixel(self, x0 + y, y0 - x, col);
-        setpixel(self, x0 - y, y0 - x, col);
+        if (fill){
+            fill_rect(self, x0 + x, y0 - y, 1, 2*y + 1, col);
+            fill_rect(self, x0 + y, y0 - x, 1, 2*x + 1, col);
+            fill_rect(self, x0 - x, y0 - y, 1, 2*y + 1, col);
+            fill_rect(self, x0 - y, y0 - x, 1, 2*x + 1, col);
+
+        } else {
+            setpixel(self, x0 + x, y0 + y, col);
+            setpixel(self, x0 - x, y0 + y, col);
+            setpixel(self, x0 + x, y0 - y, col);
+            setpixel(self, x0 - x, y0 - y, col);
+            setpixel(self, x0 + y, y0 + x, col);
+            setpixel(self, x0 - y, y0 + x, col);
+            setpixel(self, x0 + y, y0 - x, col);
+            setpixel(self, x0 - y, y0 - x, col);
+        }
     }
     return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_circle_obj, 5, 6, framebuf_circle);
 
+#define swap(a, b) { int16_t t = a; a = b; b = t; }
+
+STATIC mp_obj_t framebuf_traingle(size_t n_args, const mp_obj_t *args) {
+    // fb, x0, y0, x1, y1, x2, y2, color, fill?
+    mp_obj_framebuf_t *self = MP_OBJ_TO_PTR(args[0]);
+    mp_int_t x0 = mp_obj_get_int(args[1]);
+    mp_int_t y0 = mp_obj_get_int(args[2]);
+    mp_int_t x1 = mp_obj_get_int(args[3]);
+    mp_int_t y1 = mp_obj_get_int(args[4]);
+    mp_int_t x2 = mp_obj_get_int(args[5]);
+    mp_int_t y2 = mp_obj_get_int(args[6]);
+    mp_int_t col = mp_obj_get_int(args[7]);
+    
+    mp_int_t fill = 0;
+    if (n_args == 9){
+        fill = mp_obj_get_int(args[8]);
+    }
+
+    if (fill){
+        int16_t a, b, y, last;
+        if (y0 > y1) {
+            swap(y0, y1); swap(x0, x1);
+        }
+        if (y1 > y2) {
+            swap(y2, y1); swap(x2, x1);
+        }
+        if (y0 > y1) {
+            swap(y0, y1); swap(x0, x1);
+        }
+        if(y0 == y2) { // Handle awkward all-on-same-line case as its own thing
+            a = b = x0;
+            if(x1 < a)      a = x1;
+            else if(x1 > b) b = x1;
+            if(x2 < a)      a = x2;
+            else if(x2 > b) b = x2;
+            fill_rect(self, a, y0, b-a+1, 1, col);
+            return mp_const_none;
+        }
+        int16_t dx01 = x1 - x0;
+        int16_t dy01 = y1 - y0;
+        int16_t dx02 = x2 - x0;
+        int16_t dy02 = y2 - y0;
+        int16_t dx12 = x2 - x1;
+        int16_t dy12 = y2 - y1;
+        if (dy01 == 0) dy01 = 1;
+        if (dy02 == 0) dy02 = 1;
+        if (dy12 == 0) dy12 = 1;
+        int16_t sa = 0, sb = 0;
+        if (y1 == y2){
+            last = y1;
+        } else {
+            last = y1 - 1;
+        }
+        y = y0;
+        for (;y<last+1;y++){
+            a = x0 + sa / dy01;
+            b = x0 + sb / dy02;
+            sa += dx01;
+            sb += dx02;
+            if(a > b){
+                swap(a,b);
+            }
+            fill_rect(self, a, y, b-a+1, 1, col);
+        }
+        sa = dx12 * (y - y1);
+        sb = dx02 * (y - y0);
+        while(y <= y2){
+            a = x1 + sa / dy12;
+            b = x0 + sb / dy02;
+            sa += dx12;
+            sb += dx02;
+            if (a > b) swap(a, b);
+            fill_rect(self, a, y, b-a+1, 1, col);
+            y += 1;
+        }
+    } else {
+        drawLine(self, x0, y0, x1, y1, col);
+        drawLine(self, x1, y1, x2, y2, col);
+        drawLine(self, x2, y2, x0, y0, col);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(framebuf_traingle_obj, 8, 9, framebuf_traingle);
 
 STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&framebuf_fill_obj) },
@@ -1278,6 +1380,7 @@ STATIC const mp_rom_map_elem_t framebuf_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_loadbmp), MP_ROM_PTR(&framebuf_loadbmp_obj) },
     { MP_ROM_QSTR(MP_QSTR_loadgif), MP_ROM_PTR(&framebuf_loadgif_obj) },
     { MP_ROM_QSTR(MP_QSTR_circle), MP_ROM_PTR(&framebuf_circle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_traingle), MP_ROM_PTR(&framebuf_traingle_obj) },
 };
 STATIC MP_DEFINE_CONST_DICT(framebuf_locals_dict, framebuf_locals_dict_table);
 
