@@ -373,7 +373,6 @@ void stm32_main(uint32_t reset_mode) {
     // Change IRQ vector table if configured differently
     SCB->VTOR = MICROPY_HW_VTOR;
     #endif
-
     // Enable 8-byte stack alignment for IRQ handlers, in accord with EABI
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 
@@ -540,7 +539,8 @@ soft_reset:
     // check if user switch held to select the reset mode
     reset_mode = update_reset_mode(1);
     #endif
-
+    //printf("init reset_mode = %ld\n", reset_mode);
+    if (reset_mode > 5) reset_mode = 1;
     if (switch_get()) {
         reset_mode = 3;
     }
@@ -637,6 +637,7 @@ soft_reset:
     if (reset_mode == 1 || reset_mode == 3) {
         const char *boot_py = "boot.py";
         int ret = pyexec_file_if_exists(boot_py);
+        //printf("boot exec %x\n", ret);
         if (ret & PYEXEC_FORCED_EXIT) {
             goto soft_reset_exit;
         }
@@ -687,8 +688,8 @@ soft_reset:
     mod_network_init();
     #endif
 
+    //printf("exec main %ld\r\n", reset_mode);
     // At this point everything is fully configured and initialised.
-    printf("exec main\r\n");
     // Run the main script from the current directory.
     if ((reset_mode == 1 || reset_mode == 3) && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
         const char *main_py;
@@ -698,6 +699,7 @@ soft_reset:
             main_py = mp_obj_str_get_str(MP_STATE_PORT(pyb_config_main));
         }
         int ret = pyexec_file_if_exists(main_py);
+        // printf("exec return %x\n", ret);
         if (ret & PYEXEC_FORCED_EXIT) {
             goto soft_reset_exit;
         }
@@ -718,11 +720,10 @@ soft_reset:
             }
         }
     }
-
 soft_reset_exit:
 
     // soft reset
-
+    reset_mode = 1;
     #if MICROPY_HW_ENABLE_STORAGE
     printf("MPY: sync filesystems\n");
     storage_flush();
